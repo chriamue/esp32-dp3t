@@ -44,8 +44,8 @@ uint8_t temprature_sens_read();
 BLEAdvertising *pAdvertising;
 struct timeval now;
 
-#define BEACON_UUID           "8ec76ea3-6668-48da-9866-75be8bc86f4d" // UUID 1 128-Bit (may use linux tool uuidgen or random numbers via https://www.uuidgenerator.net/)
-
+#define LONG_UUID           "0000FD6F-0000-1000-8000-00805F9B34FB" // UUID 1 128-Bit (may use linux tool uuidgen or random numbers via https://www.uuidgenerator.net/)
+#define SHORT_UUID            "FD6F"
 void print_hex(const uint8_t *x, int len)
 {
   int i;
@@ -55,28 +55,48 @@ void print_hex(const uint8_t *x, int len)
   Serial.printf("\n");
 }
 
-void setBeacon() {
-
-  BLEBeacon oBeacon = BLEBeacon();
-  oBeacon.setManufacturerId(0x4C00); // fake Apple 0x004C LSB (ENDIAN_CHANGE_U16!)
-  oBeacon.setProximityUUID(BLEUUID(dp3t_get_ephid(0), 16, false));
-  oBeacon.setMajor((bootcount & 0xFFFF0000) >> 16);
-  oBeacon.setMinor(bootcount & 0xFFFF);
+void setAdvertisement() {
   BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
-  BLEAdvertisementData oScanResponseData = BLEAdvertisementData();
+  oAdvertisementData.setCompleteServices(BLEUUID(SHORT_UUID));
+  //oAdvertisementData.setPartialServices(BLEUUID(SHORT_UUID));
+  oAdvertisementData.setFlags(0x1A); // 0x01 Genaral Discoverable // BR_EDR_NOT_SUPPORTED 0x04
 
-  oAdvertisementData.setFlags(0x04); // BR_EDR_NOT_SUPPORTED 0x04
-
+  // Example: 0x02011A020AEB03036FFD13166FFD7007DBBD684CB2DEF80F51ED19F3B9DC
   std::string strServiceData = "";
 
-  strServiceData += (char)26;     // Len
-  strServiceData += (char)0xFF;   // Type
-  strServiceData += oBeacon.getData();
+  strServiceData += (char)0x02;     // Len
+  strServiceData += (char)0x01;   // Type
+  strServiceData += (char)0x1A;   // Flag
+
+  strServiceData += (char)0x02;     // Len
+  strServiceData += (char)0x0A;   // Type
+  strServiceData += (char)0xEB;   //
+
+  strServiceData += (char)0x03;     // Len
+  strServiceData += (char)0x03;   // Type
+  strServiceData += (char)0x6FFD;   //
+
+  std::string buff = "6FFD";
+  const uint8_t * ephid = dp3t_get_ephid(0);
+  for (int i = 0; i < 16; i++) {
+    char str[3];
+    sprintf(str, "%02X", ephid[i]);
+    buff += str;
+  }
+  strServiceData += (char)0x13;   // Len
+  strServiceData += (char)0x16;   // Type
+  strServiceData += buff;
+
+  std::string strServiceData2 = "";
+  strServiceData2 += (char)0x13;    // Len
+  strServiceData2 += (char)0x16;   // Type
+  strServiceData2 += buff;
+  //oAdvertisementData.setServiceData(BLEUUID(BEACON_UUID), "02011A020AEB03036FFD13166FFD7007DBBD684CB2DEF80F51ED19F3B9DC");
   oAdvertisementData.addData(strServiceData);
-
+  //oAdvertisementData.setServiceData(BLEUUID(SHORT_UUID), strServiceData);
   pAdvertising->setAdvertisementData(oAdvertisementData);
-  pAdvertising->setScanResponseData(oScanResponseData);
-
+  Serial.print(oAdvertisementData.getPayload().c_str());
+  Serial.print(strServiceData.c_str());
 }
 
 void initDP3T() {
@@ -113,7 +133,7 @@ void setup() {
 
   pAdvertising = BLEDevice::getAdvertising();
 
-  setBeacon();
+  setAdvertisement();
   // Start advertising
   pAdvertising->start();
   Serial.println("Advertizing started...");
