@@ -58,45 +58,34 @@ void print_hex(const uint8_t *x, int len)
 void setAdvertisement() {
   BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
   oAdvertisementData.setCompleteServices(BLEUUID(SHORT_UUID));
-  //oAdvertisementData.setPartialServices(BLEUUID(SHORT_UUID));
-  oAdvertisementData.setFlags(0x1A); // 0x01 Genaral Discoverable // BR_EDR_NOT_SUPPORTED 0x04
-
+  oAdvertisementData.setFlags(0x1A);
   // Example: 0x02011A020AEB03036FFD13166FFD7007DBBD684CB2DEF80F51ED19F3B9DC
+
   std::string strServiceData = "";
-
-  strServiceData += (char)0x02;     // Len
-  strServiceData += (char)0x01;   // Type
-  strServiceData += (char)0x1A;   // Flag
-
   strServiceData += (char)0x02;     // Len
   strServiceData += (char)0x0A;   // Type
   strServiceData += (char)0xEB;   //
 
-  strServiceData += (char)0x03;     // Len
-  strServiceData += (char)0x03;   // Type
-  strServiceData += (char)0x6FFD;   //
+  oAdvertisementData.addData(strServiceData);
 
-  std::string buff = "6FFD";
   const uint8_t * ephid = dp3t_get_ephid(0);
-  for (int i = 0; i < 16; i++) {
-    char str[3];
-    sprintf(str, "%02X", ephid[i]);
-    buff += str;
-  }
-  strServiceData += (char)0x13;   // Len
-  strServiceData += (char)0x16;   // Type
-  strServiceData += buff;
 
   std::string strServiceData2 = "";
-  strServiceData2 += (char)0x13;    // Len
-  strServiceData2 += (char)0x16;   // Type
-  strServiceData2 += buff;
-  //oAdvertisementData.setServiceData(BLEUUID(BEACON_UUID), "02011A020AEB03036FFD13166FFD7007DBBD684CB2DEF80F51ED19F3B9DC");
-  oAdvertisementData.addData(strServiceData);
-  //oAdvertisementData.setServiceData(BLEUUID(SHORT_UUID), strServiceData);
-  pAdvertising->setAdvertisementData(oAdvertisementData);
-  Serial.print(oAdvertisementData.getPayload().c_str());
-  Serial.print(strServiceData.c_str());
+  char cdata[2];
+  cdata[0] = (char)0x13;    // Len
+  cdata[1] = (char)0x16;   // Type
+  //strServiceData2 += (char)0x13;    // Len
+  //strServiceData2 += (char)0x16;   // Type
+  //strServiceData2 += std::string(cdata, 2);
+  //strServiceData2 += (char)0x6F;
+  strServiceData2 += std::string((char*) ephid, 16);
+
+  oAdvertisementData.setServiceData(BLEUUID("FD6F"), strServiceData2);
+
+  BLEAdvertisementData oScanResponseData = BLEAdvertisementData();
+  pAdvertising->setScanResponseData(oAdvertisementData);
+  pAdvertising->setMinPreferred(0);
+  pAdvertising->setMaxPreferred(0);
 }
 
 void initDP3T() {
@@ -126,7 +115,7 @@ void setup() {
   last = now.tv_sec;
 
   // Create the BLE Device
-  BLEDevice::init("");
+  BLEDevice::init("ESP32-DP3T");
 
   // Create the BLE Server
   // BLEServer *pServer = BLEDevice::createServer(); // <-- no longer required to instantiate BLEServer, less flash and ram usage
@@ -137,10 +126,10 @@ void setup() {
   // Start advertising
   pAdvertising->start();
   Serial.println("Advertizing started...");
-  delay(100);
+  delay(200);
   pAdvertising->stop();
   Serial.printf("enter deep sleep\n");
-  esp_deep_sleep(1000000LL * GPIO_DEEP_SLEEP_DURATION);
+  esp_deep_sleep(500000LL * GPIO_DEEP_SLEEP_DURATION);
   Serial.printf("in deep sleep\n");
 }
 
