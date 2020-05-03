@@ -94,9 +94,6 @@ int32_t generate_beacons(beacons_t *beacons, uint32_t max_beacons,
     for (i = 0; i < beacons->epochs; i++){
         assert(mbedtls_aes_crypt_ctr(&aes, 16, &nc_off, nonce_counter, stream_block, zero16, beacons->ephids[i]) == 0);
     }
-    
-    print_hex(prf, 32);
-    print_hex(beacons->ephids[0], 16);
     mbedtls_aes_free(&aes);
     return (0);
 }

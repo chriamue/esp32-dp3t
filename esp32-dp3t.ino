@@ -21,8 +21,6 @@
 #include "BLEUtils.h"
 #include "BLEBeacon.h"
 #include "esp_sleep.h"
-#include "mbedtls/aes.h"
-#include "mbedtls/md.h"
 
 #include "keystore.h"
 
@@ -61,7 +59,7 @@ void setBeacon() {
 
   BLEBeacon oBeacon = BLEBeacon();
   oBeacon.setManufacturerId(0x4C00); // fake Apple 0x004C LSB (ENDIAN_CHANGE_U16!)
-  oBeacon.setProximityUUID(BLEUUID(BEACON_UUID));
+  oBeacon.setProximityUUID(BLEUUID(dp3t_get_ephid(0), 16, false));
   oBeacon.setMajor((bootcount & 0xFFFF0000) >> 16);
   oBeacon.setMinor(bootcount & 0xFFFF);
   BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
@@ -79,48 +77,6 @@ void setBeacon() {
   pAdvertising->setAdvertisementData(oAdvertisementData);
   pAdvertising->setScanResponseData(oScanResponseData);
 
-}
-
-void initAES() {
-  mbedtls_aes_context aes;
-
-  char * key = "abcdefghijklmnop";
-
-  char *input = "Tech tutorials x";
-  unsigned char output[16];
-
-  mbedtls_aes_init( &aes );
-  mbedtls_aes_setkey_enc( &aes, (const unsigned char*) key, strlen(key) * 8 );
-  mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, (const unsigned char*)input, output);
-  mbedtls_aes_free( &aes );
-}
-
-void initHMAC() {
-  char *key = "secretKey";
-  char *payload = "Hello HMAC SHA 256!";
-  byte hmacResult[32];
-
-  mbedtls_md_context_t ctx;
-  mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
-
-  const size_t payloadLength = strlen(payload);
-  const size_t keyLength = strlen(key);
-
-  mbedtls_md_init(&ctx);
-  mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(md_type), 1);
-  mbedtls_md_hmac_starts(&ctx, (const unsigned char *) key, keyLength);
-  mbedtls_md_hmac_update(&ctx, (const unsigned char *) payload, payloadLength);
-  mbedtls_md_hmac_finish(&ctx, hmacResult);
-  mbedtls_md_free(&ctx);
-
-  Serial.print("Hash: ");
-
-  for (int i = 0; i < sizeof(hmacResult); i++) {
-    char str[3];
-
-    sprintf(str, "%02x", (int)hmacResult[i]);
-    Serial.print(str);
-  }
 }
 
 void initDP3T() {
